@@ -1,0 +1,6 @@
+framework module PipeProcessor {
+  umbrella header "PipeProcessor-umbrella.h"
+
+  export *
+  module * { export * }
+}

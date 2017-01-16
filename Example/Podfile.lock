@@ -1,0 +1,16 @@
+PODS:
+  - PipeProcessor (0.1.0)
+
+DEPENDENCIES:
+  - PipeProcessor (from `../`)
+
+EXTERNAL SOURCES:
+  PipeProcessor:
+    :path: "../"
+
+SPEC CHECKSUMS:
+  PipeProcessor: 05b44162790364df9d64eb14d2c185e01bdb4144
+
+PODFILE CHECKSUM: 1d03b9686c9bce4054404e7737cd1d04418bf2e1
+
+COCOAPODS: 1.1.1

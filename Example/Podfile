@@ -1,0 +1,11 @@
+use_frameworks!
+
+target 'PipeProcessor_Example' do
+  pod 'PipeProcessor', :path => '../'
+
+  target 'PipeProcessor_Tests' do
+    inherit! :search_paths
+
+    
+  end
+end

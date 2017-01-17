@@ -21,8 +21,45 @@ public protocol ProcessError {
     
 }
 
+public class Cancelable {
+    public func cancel() {
+        cancelBlock?()
+    }
+    
+    public func add(_ block: @escaping () -> Void) {
+        if let oldBlock = cancelBlock {
+            cancelBlock = {
+                oldBlock()
+                block()
+            }
+        } else {
+            cancelBlock = block
+        }
+    }
+    
+    public func add(_ cancelable: Cancelable) {
+        add {
+            cancelable.cancel()
+        }
+    }
+    
+    private var cancelBlock: (() -> Void)?
+    
+    public init(_ block: @escaping () -> Void) {
+        cancelBlock = block
+    }
+    
+    public init() {
+        
+    }
+    
+    public class func empty() -> Cancelable {
+        return Cancelable()
+    }
+}
+
 public typealias SyncProcessFunction<T: Context> = (T) -> Result<T, ProcessError>
-public typealias AsyncProcessFuction<T: Context> = (T, (Result<T, ProcessError>) -> Void) -> Void
+public typealias AsyncProcessFuction<T: Context> = (T, @escaping (Result<T, ProcessError>) -> Void) -> Cancelable
 
 public protocol Processor {
     associatedtype ContextType: Context
@@ -34,7 +71,7 @@ public protocol SyncProcessor: Processor {
 }
 
 public protocol AsyncProcessor: Processor {
-    func process(_ context: ContextType, complete: (Result<ContextType, ProcessError>) -> Void)
+    @discardableResult func process(_ context: ContextType, complete: @escaping (Result<ContextType, ProcessError>) -> Void) -> Cancelable
 }
 
 public struct AnySyncProcessor<T: Context>: SyncProcessor {
@@ -53,8 +90,8 @@ public struct AnySyncProcessor<T: Context>: SyncProcessor {
 
 public struct AnyAsyncProcessor<T: Context>: AsyncProcessor {
     public typealias ContextType = T
-    public func process(_ context: T, complete: (Result<T, ProcessError>) -> Void) {
-        processBlock(context, complete)
+    @discardableResult public func process(_ context: T, complete: @escaping (Result<T, ProcessError>) -> Void) -> Cancelable {
+        return processBlock(context, complete)
     }
     
     public var description: String {
@@ -80,12 +117,13 @@ public extension SyncProcessor {
     }
     
     func appendProcessor<T: AsyncProcessor>(_ processor: T) -> AnyAsyncProcessor<Self.ContextType> where T.ContextType == Self.ContextType {
-        return AnyAsyncProcessor<Self.ContextType>(processBlock: { (context, complete) in
+        return AnyAsyncProcessor<Self.ContextType>(processBlock: { (context, complete) -> Cancelable in
             switch self.process(context) {
             case let .success(ctx):
-                processor.process(ctx, complete: complete)
+                return processor.process(ctx, complete: complete)
             case let .error(error):
                 complete(.error(error))
+                return Cancelable.empty()
             }
         }, descriptionBlock: { () -> String in
             return "\(self.description)>>>\(processor.description)"
@@ -95,8 +133,8 @@ public extension SyncProcessor {
 
 public extension AsyncProcessor {
     func appendProcessor<T: SyncProcessor>(_ processor: T) -> AnyAsyncProcessor<Self.ContextType> where T.ContextType == Self.ContextType {
-        return AnyAsyncProcessor<Self.ContextType>(processBlock: { (context, complete) in
-            self.process(context, complete: { (result) in
+        return AnyAsyncProcessor<Self.ContextType>(processBlock: { (context, complete) -> Cancelable in
+            return self.process(context, complete: { (result) in
                 switch result {
                 case let .success(ctx):
                     complete(processor.process(ctx))
@@ -110,15 +148,17 @@ public extension AsyncProcessor {
     }
     
     func appendProcessor<T: AsyncProcessor>(_ processor: T) -> AnyAsyncProcessor<Self.ContextType> where T.ContextType == Self.ContextType {
-        return AnyAsyncProcessor<Self.ContextType>(processBlock: { (context, complete) in
-            self.process(context, complete: { (result) in
+        return AnyAsyncProcessor<Self.ContextType>(processBlock: { (context, complete) -> Cancelable in
+            let cancelable = Cancelable.empty()
+            cancelable.add(self.process(context, complete: { (result) in
                 switch result {
                 case let .success(ctx):
-                    processor.process(ctx, complete: complete)
+                    cancelable.add(processor.process(ctx, complete: complete))
                 case let .error(error):
                     complete(.error(error))
                 }
-            })
+            }))
+            return cancelable
         }, descriptionBlock: { () -> String in
             return "\(self.description)>>>\(processor.description)"
         })

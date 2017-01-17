@@ -26,7 +26,6 @@ public typealias AsyncProcessFuction<T: Context> = (T, (Result<T, ProcessError>)
 
 public protocol Processor {
     associatedtype ContextType: Context
-    
     var description: String { get }
 }
 

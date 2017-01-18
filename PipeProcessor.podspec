@@ -18,14 +18,14 @@ Pod::Spec.new do |s|
 #   * Finally, don't worry about the indent, CocoaPods strips it!
 
   s.description      = <<-DESC
-TODO: Add long description of the pod here.
+  Processor support pipe and cancel
                        DESC
 
   s.homepage         = 'https://github.com/7ulipa/PipeProcessor'
   # s.screenshots     = 'www.example.com/screenshots_1', 'www.example.com/screenshots_2'
   s.license          = { :type => 'MIT', :file => 'LICENSE' }
   s.author           = { 'Tulipa' => 'darwin.jxzang@gmail.com' }
-  s.source           = { :git => 'https://github.com/7ulipa/PipeProcessor.git', :tag => 0.0.2 }
+  s.source           = { :git => 'https://github.com/7ulipa/PipeProcessor.git', :tag => s.version }
   # s.social_media_url = 'https://twitter.com/<TWITTER_USERNAME>'
 
   s.ios.deployment_target = '8.0'

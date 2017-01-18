@@ -8,7 +8,7 @@
 
 Pod::Spec.new do |s|
   s.name             = 'PipeProcessor'
-  s.version          = '0.1.0'
+  s.version          = '0.0.2'
   s.summary          = 'A short description of PipeProcessor.'
 
 # This description is used to generate tags and improve search results.
@@ -21,11 +21,11 @@ Pod::Spec.new do |s|
 TODO: Add long description of the pod here.
                        DESC
 
-  s.homepage         = 'https://github.com/<GITHUB_USERNAME>/PipeProcessor'
+  s.homepage         = 'https://github.com/7ulipa/PipeProcessor'
   # s.screenshots     = 'www.example.com/screenshots_1', 'www.example.com/screenshots_2'
   s.license          = { :type => 'MIT', :file => 'LICENSE' }
   s.author           = { 'Tulipa' => 'darwin.jxzang@gmail.com' }
-  s.source           = { :git => 'https://github.com/<GITHUB_USERNAME>/PipeProcessor.git', :tag => s.version.to_s }
+  s.source           = { :git => 'https://github.com/7ulipa/PipeProcessor.git', :tag => 0.0.2 }
   # s.social_media_url = 'https://twitter.com/<TWITTER_USERNAME>'
 
   s.ios.deployment_target = '8.0'

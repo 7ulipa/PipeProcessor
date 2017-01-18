@@ -7,6 +7,7 @@
 //
 
 import UIKit
+import Result
 import PipeProcessor
 
 extension UIImage: Context {

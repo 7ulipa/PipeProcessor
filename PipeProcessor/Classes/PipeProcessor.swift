@@ -7,18 +7,14 @@
 //
 
 import Foundation
-
-public enum Result<T, Error> {
-    case success(T)
-    case error(Error)
-}
+import Result
 
 public protocol Context {
     
 }
 
-public protocol ProcessError {
-    
+public struct ProcessError: Error {
+    let message: String
 }
 
 public class Cancelable {
@@ -108,8 +104,8 @@ public extension SyncProcessor {
             switch self.process(context) {
             case let .success(ctx):
                 return processor.process(ctx)
-            case let .error(error):
-                return .error(error)
+            case let .failure(error):
+                return .failure(error)
             }
         }, descriptionBlock: { () -> String in
             return "\(self.description)>>>\(processor.description)"
@@ -121,8 +117,8 @@ public extension SyncProcessor {
             switch self.process(context) {
             case let .success(ctx):
                 return processor.process(ctx, complete: complete)
-            case let .error(error):
-                complete(.error(error))
+            case let .failure(error):
+                complete(.failure(error))
                 return Cancelable.empty()
             }
         }, descriptionBlock: { () -> String in
@@ -138,8 +134,8 @@ public extension AsyncProcessor {
                 switch result {
                 case let .success(ctx):
                     complete(processor.process(ctx))
-                case let .error(error):
-                    complete(.error(error))
+                case let .failure(error):
+                    complete(.failure(error))
                 }
             })
         }, descriptionBlock: { () -> String in
@@ -154,8 +150,8 @@ public extension AsyncProcessor {
                 switch result {
                 case let .success(ctx):
                     cancelable.add(processor.process(ctx, complete: complete))
-                case let .error(error):
-                    complete(.error(error))
+                case let .failure(error):
+                    complete(.failure(error))
                 }
             }))
             return cancelable

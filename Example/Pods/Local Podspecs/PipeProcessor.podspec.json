@@ -1,9 +1,9 @@
 {
   "name": "PipeProcessor",
-  "version": "0.1.0",
-  "summary": "A short description of PipeProcessor.",
-  "description": "TODO: Add long description of the pod here.",
-  "homepage": "https://github.com/<GITHUB_USERNAME>/PipeProcessor",
+  "version": "0.0.2",
+  "summary": "Processor support pipe and cancel",
+  "description": "Processor support pipe and cancel, easy to use",
+  "homepage": "https://github.com/7ulipa/PipeProcessor",
   "license": {
     "type": "MIT",
     "file": "LICENSE"
@@ -12,11 +12,16 @@
     "Tulipa": "darwin.jxzang@gmail.com"
   },
   "source": {
-    "git": "https://github.com/<GITHUB_USERNAME>/PipeProcessor.git",
-    "tag": "0.1.0"
+    "git": "https://github.com/7ulipa/PipeProcessor.git",
+    "tag": "0.0.2"
   },
   "platforms": {
     "ios": "8.0"
   },
-  "source_files": "PipeProcessor/Classes/**/*"
+  "source_files": "PipeProcessor/Classes/**/*",
+  "dependencies": {
+    "Result": [
+
+    ]
+  }
 }

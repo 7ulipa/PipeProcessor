@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name             = 'PipeProcessor'
-  s.version          = '0.0.2'
+  s.version          = '0.0.3'
   s.summary          = 'Processor support pipe and cancel'
 
   s.description      = <<-DESC
@@ -15,4 +15,5 @@ Pod::Spec.new do |s|
 
   s.source_files = 'PipeProcessor/Classes/**/*'
 
+  s.dependency 'Result'
 end

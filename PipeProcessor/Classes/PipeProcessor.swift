@@ -15,6 +15,9 @@ public protocol Context {
 
 public struct ProcessError: Error {
     public let message: String
+    public init(message: String) {
+        self.message = message
+    }
 }
 
 public class Cancelable {

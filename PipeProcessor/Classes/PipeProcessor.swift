@@ -99,6 +99,11 @@ public struct AnyAsyncProcessor<T: Context>: AsyncProcessor {
     
     let processBlock: AsyncProcessFuction<T>
     let descriptionBlock: () -> String
+    
+    public init(processBlock: @escaping AsyncProcessFuction<T>, descriptionBlock: @escaping () -> String) {
+        self.processBlock = processBlock
+        self.descriptionBlock = descriptionBlock
+    }
 }
 
 public extension SyncProcessor {
@@ -127,6 +132,19 @@ public extension SyncProcessor {
         }, descriptionBlock: { () -> String in
             return "\(self.description)>>>\(processor.description)"
         })
+    }
+    
+    
+    public var async: AnyAsyncProcessor<ContextType> {
+        get {
+            return AnyAsyncProcessor<ContextType>(processBlock: { (context, complete) -> Cancelable in
+                let result = self.process(context)
+                complete(result)
+                return Cancelable.empty()
+            }, descriptionBlock: { () -> String in
+                return self.description
+            })
+        }
     }
 }
 

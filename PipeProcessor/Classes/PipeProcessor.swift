@@ -9,17 +9,6 @@
 import Foundation
 import Result
 
-public protocol Context {
-    
-}
-
-public struct ProcessError: Error {
-    public let message: String
-    public init(message: String) {
-        self.message = message
-    }
-}
-
 public class Cancelable {
     public func cancel() {
         cancelBlock?()
@@ -57,59 +46,65 @@ public class Cancelable {
     }
 }
 
-public typealias SyncProcessFunction<T: Context> = (T) -> Result<T, ProcessError>
-public typealias AsyncProcessFuction<T: Context> = (T, @escaping (Result<T, ProcessError>) -> Void) -> Cancelable
+public typealias SyncProcessFunction<Input, Output, Error: Swift.Error> = (Input) -> Result<Output, Error>
+public typealias AsyncProcessFuction<Input, Output, Error: Swift.Error> = (Input, @escaping (Result<Output, Error>) -> Void) -> Cancelable
 
 public protocol Processor {
-    associatedtype ContextType: Context
+    associatedtype Input
+    associatedtype Output
+    associatedtype Error: Swift.Error
     var description: String { get }
 }
 
 public protocol SyncProcessor: Processor {
-    func process(_ context: ContextType) -> Result<ContextType, ProcessError>
+    func process(_ input: Input) -> Result<Output, Error>
 }
 
 public protocol AsyncProcessor: Processor {
-    @discardableResult func process(_ context: ContextType, complete: @escaping (Result<ContextType, ProcessError>) -> Void) -> Cancelable
+    @discardableResult func process(_ input: Input, complete: @escaping (Result<Output, Error>) -> Void) -> Cancelable
 }
 
-public struct AnySyncProcessor<T: Context>: SyncProcessor {
-    public typealias ContextType = T
-    public func process(_ context: T) -> Result<T, ProcessError> {
-        return processBlock(context)
+public struct AnySyncProcessor<InputType, OutputType, ErrorType: Swift.Error>: SyncProcessor {
+    public typealias Input = InputType
+    public typealias Output = OutputType
+    public typealias Error = ErrorType
+    public func process(_ input: Input) -> Result<Output, Error> {
+        return processBlock(input)
     }
     
     public var description: String {
         return descriptionBlock()
     }
     
-    let processBlock: SyncProcessFunction<T>
+    let processBlock: SyncProcessFunction<Input, Output, Error>
     let descriptionBlock: () -> String
 }
 
-public struct AnyAsyncProcessor<T: Context>: AsyncProcessor {
-    public typealias ContextType = T
-    @discardableResult public func process(_ context: T, complete: @escaping (Result<T, ProcessError>) -> Void) -> Cancelable {
-        return processBlock(context, complete)
+public struct AnyAsyncProcessor<InputType, OutputType, ErrorType: Swift.Error>: AsyncProcessor {
+    public typealias Input = InputType
+    public typealias Output = OutputType
+    public typealias Error = ErrorType
+    @discardableResult public func process(_ input: Input, complete: @escaping (Result<Output, Error>) -> Void) -> Cancelable {
+        return processBlock(input, complete)
     }
     
     public var description: String {
         return descriptionBlock()
     }
     
-    let processBlock: AsyncProcessFuction<T>
+    let processBlock: AsyncProcessFuction<Input, Output, Error>
     let descriptionBlock: () -> String
     
-    public init(processBlock: @escaping AsyncProcessFuction<T>, descriptionBlock: @escaping () -> String) {
+    public init(processBlock: @escaping AsyncProcessFuction<Input, Output, Error>, descriptionBlock: @escaping () -> String) {
         self.processBlock = processBlock
         self.descriptionBlock = descriptionBlock
     }
 }
 
 public extension SyncProcessor {
-    func appendProcessor<T: SyncProcessor>(_ processor: T) -> AnySyncProcessor<Self.ContextType> where T.ContextType == Self.ContextType {
-        return AnySyncProcessor<Self.ContextType>(processBlock: { (context) -> Result<Self.ContextType, ProcessError> in
-            switch self.process(context) {
+    func appendProcessor<T: SyncProcessor>(_ processor: T) -> AnySyncProcessor<Input, T.Output, T.Error> where Output == T.Input, Error == T.Error {
+        return AnySyncProcessor<Input, T.Output, Error>(processBlock: { (input) -> Result<T.Output, T.Error> in
+            switch self.process(input) {
             case let .success(ctx):
                 return processor.process(ctx)
             case let .failure(error):
@@ -120,9 +115,9 @@ public extension SyncProcessor {
         })
     }
     
-    func appendProcessor<T: AsyncProcessor>(_ processor: T) -> AnyAsyncProcessor<Self.ContextType> where T.ContextType == Self.ContextType {
-        return AnyAsyncProcessor<Self.ContextType>(processBlock: { (context, complete) -> Cancelable in
-            switch self.process(context) {
+    func appendProcessor<T: AsyncProcessor>(_ processor: T) -> AnyAsyncProcessor<Input, T.Output, T.Error> where Output == T.Input, Error == T.Error {
+        return AnyAsyncProcessor<Input, T.Output, T.Error>(processBlock: { (input, complete) -> Cancelable in
+            switch self.process(input) {
             case let .success(ctx):
                 return processor.process(ctx, complete: complete)
             case let .failure(error):
@@ -135,10 +130,10 @@ public extension SyncProcessor {
     }
     
     
-    public var async: AnyAsyncProcessor<ContextType> {
+    public var async: AnyAsyncProcessor<Input, Output, Error> {
         get {
-            return AnyAsyncProcessor<ContextType>(processBlock: { (context, complete) -> Cancelable in
-                let result = self.process(context)
+            return AnyAsyncProcessor<Input, Output, Error>(processBlock: { (input, complete) -> Cancelable in
+                let result = self.process(input)
                 complete(result)
                 return Cancelable.empty()
             }, descriptionBlock: { () -> String in
@@ -149,9 +144,9 @@ public extension SyncProcessor {
 }
 
 public extension AsyncProcessor {
-    func appendProcessor<T: SyncProcessor>(_ processor: T) -> AnyAsyncProcessor<Self.ContextType> where T.ContextType == Self.ContextType {
-        return AnyAsyncProcessor<Self.ContextType>(processBlock: { (context, complete) -> Cancelable in
-            return self.process(context, complete: { (result) in
+    func appendProcessor<T: SyncProcessor>(_ processor: T) -> AnyAsyncProcessor<Input, T.Output, T.Error> where Output == T.Input, Error == T.Error {
+        return AnyAsyncProcessor<Input, T.Output, T.Error>(processBlock: { (input, complete) -> Cancelable in
+            return self.process(input, complete: { (result) in
                 switch result {
                 case let .success(ctx):
                     complete(processor.process(ctx))
@@ -164,10 +159,10 @@ public extension AsyncProcessor {
         })
     }
     
-    func appendProcessor<T: AsyncProcessor>(_ processor: T) -> AnyAsyncProcessor<Self.ContextType> where T.ContextType == Self.ContextType {
-        return AnyAsyncProcessor<Self.ContextType>(processBlock: { (context, complete) -> Cancelable in
+    func appendProcessor<T: AsyncProcessor>(_ processor: T) -> AnyAsyncProcessor<Input, T.Output, T.Error> where Output == T.Input, Error == T.Error {
+        return AnyAsyncProcessor<Input, T.Output, T.Error>(processBlock: { (input, complete) -> Cancelable in
             let cancelable = Cancelable.empty()
-            cancelable.add(self.process(context, complete: { (result) in
+            cancelable.add(self.process(input, complete: { (result) in
                 switch result {
                 case let .success(ctx):
                     cancelable.add(processor.process(ctx, complete: complete))
@@ -188,18 +183,18 @@ precedencegroup Left {
 
 infix operator >>> : Left
 
-public func >>> <T: SyncProcessor, G: SyncProcessor> (l: T, r: G) -> AnySyncProcessor<T.ContextType> where T.ContextType == G.ContextType {
+public func >>> <T: SyncProcessor, G: SyncProcessor> (l: T, r: G) -> AnySyncProcessor<T.Input, G.Output, T.Error> where T.Output == G.Input, T.Error == G.Error {
     return l.appendProcessor(r)
 }
 
-public func >>> <T: SyncProcessor, G: AsyncProcessor> (l: T, r: G) -> AnyAsyncProcessor<T.ContextType> where T.ContextType == G.ContextType {
+public func >>> <T: SyncProcessor, G: AsyncProcessor> (l: T, r: G) -> AnyAsyncProcessor<T.Input, G.Output, T.Error> where T.Output == G.Input, T.Error == G.Error {
     return l.appendProcessor(r)
 }
 
-public func >>> <T: AsyncProcessor, G: SyncProcessor> (l: T, r: G) -> AnyAsyncProcessor<T.ContextType> where T.ContextType == G.ContextType {
+public func >>> <T: AsyncProcessor, G: SyncProcessor> (l: T, r: G) -> AnyAsyncProcessor<T.Input, G.Output, T.Error> where T.Output == G.Input, T.Error == G.Error {
     return l.appendProcessor(r)
 }
 
-public func >>> <T: AsyncProcessor, G: AsyncProcessor> (l: T, r: G) -> AnyAsyncProcessor<T.ContextType> where T.ContextType == G.ContextType {
+public func >>> <T: AsyncProcessor, G: AsyncProcessor> (l: T, r: G) -> AnyAsyncProcessor<T.Input, G.Output, T.Error> where T.Output == G.Input, T.Error == G.Error {
     return l.appendProcessor(r)
 }

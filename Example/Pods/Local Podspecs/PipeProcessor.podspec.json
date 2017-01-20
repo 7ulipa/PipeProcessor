@@ -1,6 +1,6 @@
 {
   "name": "PipeProcessor",
-  "version": "0.0.2",
+  "version": "0.0.6",
   "summary": "Processor support pipe and cancel",
   "description": "Processor support pipe and cancel, easy to use",
   "homepage": "https://github.com/7ulipa/PipeProcessor",
@@ -13,7 +13,7 @@
   },
   "source": {
     "git": "https://github.com/7ulipa/PipeProcessor.git",
-    "tag": "0.0.2"
+    "tag": "0.0.6"
   },
   "platforms": {
     "ios": "8.0"

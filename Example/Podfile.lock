@@ -1,5 +1,5 @@
 PODS:
-  - PipeProcessor (0.0.2):
+  - PipeProcessor (0.0.6):
     - Result
   - Result (3.1.0)
 
@@ -11,7 +11,7 @@ EXTERNAL SOURCES:
     :path: "../"
 
 SPEC CHECKSUMS:
-  PipeProcessor: 9933a8a34c33d977ea3b118636b68a5be317df67
+  PipeProcessor: 5780b7d7771a9fceb43214123376ba2150a571a6
   Result: 4e3ed5995ed94d0cd6a09be9a431fce3f3624bbf
 
 PODFILE CHECKSUM: 1d03b9686c9bce4054404e7737cd1d04418bf2e1

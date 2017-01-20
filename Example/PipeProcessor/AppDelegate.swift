@@ -10,15 +10,17 @@ import UIKit
 import Result
 import PipeProcessor
 
-extension UIImage: Context {
+extension String: Error {
     
 }
 
 class ProcessorA: SyncProcessor {
-    typealias ContextType = UIImage
+    typealias Input = UIImage
+    typealias Output = UIImage
+    typealias Error = String
     
-    func process(_ context: UIImage) -> Result<UIImage, ProcessError> {
-        return .success(context)
+    func process(_ input: UIImage) -> Result<UIImage, String> {
+        return .success(input)
     }
     
     var description: String {
@@ -29,18 +31,14 @@ class ProcessorA: SyncProcessor {
 }
 
 class ProcessorB: AsyncProcessor {
-    typealias ContextType = UIImage
+    typealias Input = UIImage
+    typealias Output = UIImage
+    typealias Error = String
     
-    @discardableResult func process(_ context: UIImage, complete: @escaping (Result<UIImage, ProcessError>) -> Void) -> Cancelable {
-        var canceled = false
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-            if !canceled {
-                complete(.success(context))
-            }
-        }
+    func process(_ input: UIImage, complete: @escaping (Result<UIImage, String>) -> Void) -> Cancelable {
+        complete(.success(input))
         return Cancelable {
-            canceled = true
-            debugPrint("Cancel")
+            
         }
     }
     

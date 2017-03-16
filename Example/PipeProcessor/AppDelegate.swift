@@ -19,7 +19,7 @@ class ProcessorA: SyncProcessor {
     typealias Output = UIImage
     typealias Error = String
     
-    func process(_ input: UIImage) -> Result<UIImage, String> {
+    func process(_ input: UIImage, info: Any? = nil) -> Result<UIImage, String> {
         return .success(input)
     }
     
@@ -35,7 +35,7 @@ class ProcessorB: AsyncProcessor {
     typealias Output = UIImage
     typealias Error = String
     
-    func process(_ input: UIImage, complete: @escaping (Result<UIImage, String>) -> Void) -> Cancelable {
+    func process(_ input: UIImage, info: Any? = nil, complete: @escaping (Result<UIImage, String>) -> Void) -> Cancelable {
         complete(.success(input))
         return Cancelable {
             

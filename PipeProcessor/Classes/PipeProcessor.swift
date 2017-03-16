@@ -46,8 +46,8 @@ public class Cancelable {
     }
 }
 
-public typealias SyncProcessFunction<Input, Output, Error: Swift.Error> = (Input) -> Result<Output, Error>
-public typealias AsyncProcessFuction<Input, Output, Error: Swift.Error> = (Input, @escaping (Result<Output, Error>) -> Void) -> Cancelable
+public typealias SyncProcessFunction<Input, Output, Error: Swift.Error> = (Input, Any?) -> Result<Output, Error>
+public typealias AsyncProcessFuction<Input, Output, Error: Swift.Error> = (Input, Any?, @escaping (Result<Output, Error>) -> Void) -> Cancelable
 
 public protocol Processor {
     associatedtype Input
@@ -57,19 +57,19 @@ public protocol Processor {
 }
 
 public protocol SyncProcessor: Processor {
-    func process(_ input: Input) -> Result<Output, Error>
+    func process(_ input: Input, info: Any?) -> Result<Output, Error>
 }
 
 public protocol AsyncProcessor: Processor {
-    @discardableResult func process(_ input: Input, complete: @escaping (Result<Output, Error>) -> Void) -> Cancelable
+    @discardableResult func process(_ input: Input, info: Any?, complete: @escaping (Result<Output, Error>) -> Void) -> Cancelable
 }
 
 public struct AnySyncProcessor<InputType, OutputType, ErrorType: Swift.Error>: SyncProcessor {
     public typealias Input = InputType
     public typealias Output = OutputType
     public typealias Error = ErrorType
-    public func process(_ input: Input) -> Result<Output, Error> {
-        return processBlock(input)
+    public func process(_ input: Input, info: Any? = nil) -> Result<Output, Error> {
+        return processBlock(input, info)
     }
     
     public var description: String {
@@ -84,8 +84,8 @@ public struct AnyAsyncProcessor<InputType, OutputType, ErrorType: Swift.Error>: 
     public typealias Input = InputType
     public typealias Output = OutputType
     public typealias Error = ErrorType
-    @discardableResult public func process(_ input: Input, complete: @escaping (Result<Output, Error>) -> Void) -> Cancelable {
-        return processBlock(input, complete)
+    @discardableResult public func process(_ input: Input, info: Any? = nil, complete: @escaping (Result<Output, Error>) -> Void) -> Cancelable {
+        return processBlock(input, info, complete)
     }
     
     public var description: String {
@@ -103,10 +103,10 @@ public struct AnyAsyncProcessor<InputType, OutputType, ErrorType: Swift.Error>: 
 
 public extension SyncProcessor {
     func appendProcessor<T: SyncProcessor>(_ processor: T) -> AnySyncProcessor<Input, T.Output, T.Error> where Output == T.Input, Error == T.Error {
-        return AnySyncProcessor<Input, T.Output, Error>(processBlock: { (input) -> Result<T.Output, T.Error> in
-            switch self.process(input) {
+        return AnySyncProcessor<Input, T.Output, Error>(processBlock: { (input, info) -> Result<T.Output, T.Error> in
+            switch self.process(input, info: info) {
             case let .success(ctx):
-                return processor.process(ctx)
+                return processor.process(ctx, info: info)
             case let .failure(error):
                 return .failure(error)
             }
@@ -116,10 +116,10 @@ public extension SyncProcessor {
     }
     
     func appendProcessor<T: AsyncProcessor>(_ processor: T) -> AnyAsyncProcessor<Input, T.Output, T.Error> where Output == T.Input, Error == T.Error {
-        return AnyAsyncProcessor<Input, T.Output, T.Error>(processBlock: { (input, complete) -> Cancelable in
-            switch self.process(input) {
+        return AnyAsyncProcessor<Input, T.Output, T.Error>(processBlock: { (input, info, complete) -> Cancelable in
+            switch self.process(input, info: info) {
             case let .success(ctx):
-                return processor.process(ctx, complete: complete)
+                return processor.process(ctx, info: info, complete: complete)
             case let .failure(error):
                 complete(.failure(error))
                 return Cancelable.empty()
@@ -132,8 +132,8 @@ public extension SyncProcessor {
     
     public var async: AnyAsyncProcessor<Input, Output, Error> {
         get {
-            return AnyAsyncProcessor<Input, Output, Error>(processBlock: { (input, complete) -> Cancelable in
-                let result = self.process(input)
+            return AnyAsyncProcessor<Input, Output, Error>(processBlock: { (input, info, complete) -> Cancelable in
+                let result = self.process(input, info: info)
                 complete(result)
                 return Cancelable.empty()
             }, descriptionBlock: { () -> String in
@@ -145,11 +145,11 @@ public extension SyncProcessor {
 
 public extension AsyncProcessor {
     func appendProcessor<T: SyncProcessor>(_ processor: T) -> AnyAsyncProcessor<Input, T.Output, T.Error> where Output == T.Input, Error == T.Error {
-        return AnyAsyncProcessor<Input, T.Output, T.Error>(processBlock: { (input, complete) -> Cancelable in
-            return self.process(input, complete: { (result) in
+        return AnyAsyncProcessor<Input, T.Output, T.Error>(processBlock: { (input, info, complete) -> Cancelable in
+            return self.process(input, info: info, complete: { (result) in
                 switch result {
                 case let .success(ctx):
-                    complete(processor.process(ctx))
+                    complete(processor.process(ctx, info: info))
                 case let .failure(error):
                     complete(.failure(error))
                 }
@@ -160,12 +160,12 @@ public extension AsyncProcessor {
     }
     
     func appendProcessor<T: AsyncProcessor>(_ processor: T) -> AnyAsyncProcessor<Input, T.Output, T.Error> where Output == T.Input, Error == T.Error {
-        return AnyAsyncProcessor<Input, T.Output, T.Error>(processBlock: { (input, complete) -> Cancelable in
+        return AnyAsyncProcessor<Input, T.Output, T.Error>(processBlock: { (input, info, complete) -> Cancelable in
             let cancelable = Cancelable.empty()
-            cancelable.add(self.process(input, complete: { (result) in
+            cancelable.add(self.process(input, info: info, complete: { (result) in
                 switch result {
                 case let .success(ctx):
-                    cancelable.add(processor.process(ctx, complete: complete))
+                    cancelable.add(processor.process(ctx, info: info, complete: complete))
                 case let .failure(error):
                     complete(.failure(error))
                 }
